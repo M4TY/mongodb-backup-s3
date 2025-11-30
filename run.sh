@@ -9,6 +9,14 @@ MONGODB_PASS=${MONGODB_PASS:-${MONGODB_ENV_MONGODB_PASS}}
 
 S3PATH="s3://$BUCKET/$BACKUP_FOLDER"
 
+: "${S3_ENDPOINT:=}"
+
+if [ -n "$S3_ENDPOINT" ]; then
+  ENDPOINT_OPTION="--endpoint-url $S3_ENDPOINT"
+else
+  ENDPOINT_OPTION=""
+fi
+
 [[ ( -z "${MONGODB_USER}" ) && ( -n "${MONGODB_PASS}" ) ]] && MONGODB_USER='admin'
 
 [[ ( -n "${MONGODB_USER}" ) ]] && USER_STR=" --username ${MONGODB_USER}"
@@ -27,7 +35,10 @@ BACKUP_NAME=\${TIMESTAMP}.dump.gz
 S3BACKUP=${S3PATH}\${BACKUP_NAME}
 S3LATEST=${S3PATH}latest.dump.gz
 echo "=> Backup started"
-if mongodump --host ${MONGODB_HOST} --port ${MONGODB_PORT} ${USER_STR}${PASS_STR}${DB_STR} --archive=\${BACKUP_NAME} --gzip ${EXTRA_OPTS} && aws s3 cp \${BACKUP_NAME} \${S3BACKUP} && aws s3 cp \${S3BACKUP} \${S3LATEST} && rm \${BACKUP_NAME} ;then
+if mongodump --host ${MONGODB_HOST} --port ${MONGODB_PORT} ${USER_STR}${PASS_STR}${DB_STR} --archive=\${BACKUP_NAME} --gzip ${EXTRA_OPTS} \\
+    && aws s3 cp \${BACKUP_NAME} \${S3BACKUP} ${ENDPOINT_OPTION} \\
+    && aws s3 cp \${S3BACKUP} \${S3LATEST} ${ENDPOINT_OPTION} \\
+    && rm \${BACKUP_NAME} ; then
     echo "   > Backup succeeded"
 else
     echo "   > Backup failed"
@@ -48,7 +59,9 @@ else
 fi
 S3RESTORE=${S3PATH}\${RESTORE_ME}
 echo "=> Restore database from \${RESTORE_ME}"
-if aws s3 cp \${S3RESTORE} \${RESTORE_ME} && mongorestore --host ${MONGODB_HOST} --port ${MONGODB_PORT} ${USER_STR}${PASS_STR}${DB_STR} --drop ${EXTRA_OPTS} --archive=\${RESTORE_ME} --gzip && rm \${RESTORE_ME}; then
+if aws s3 cp \${S3RESTORE} \${RESTORE_ME} ${ENDPOINT_OPTION} \\
+    && mongorestore --host ${MONGODB_HOST} --port ${MONGODB_PORT} ${USER_STR}${PASS_STR}${DB_STR} --drop ${EXTRA_OPTS} --archive=\${RESTORE_ME} --gzip \\
+    && rm \${RESTORE_ME}; then
     echo "   Restore succeeded"
 else
     echo "   Restore failed"
@@ -62,7 +75,7 @@ echo "=> Creating list script"
 rm -f /listbackups.sh
 cat <<EOF >> /listbackups.sh
 #!/bin/bash
-aws s3 ls ${S3PATH}
+aws s3 ls ${S3PATH} ${ENDPOINT_OPTION}
 EOF
 chmod +x /listbackups.sh
 echo "=> List script created"
@@ -79,7 +92,7 @@ if [ -n "${INIT_BACKUP}" ]; then
 fi
 
 if [ -n "${INIT_RESTORE}" ]; then
-    echo "=> Restore store from lastest backup on startup"
+    echo "=> Restore store from latest backup on startup"
     /restore.sh
 fi
 
