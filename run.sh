@@ -52,7 +52,7 @@ echo "=> Creating restore script"
 rm -f /restore.sh
 cat <<EOF >> /restore.sh
 #!/bin/bash
-if [[( -n "\${1}" )]]; then
+if [[ -n "${1}" ]]; then
     RESTORE_ME=\${1}.dump.gz
 else
     RESTORE_ME=latest.dump.gz
