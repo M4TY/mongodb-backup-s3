@@ -1,14 +1,11 @@
 FROM mongo
 
-RUN apt-get update && apt-get install -y \
-    python3-full \
-    python3-pip \
-    build-essential \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y curl unzip
 
-RUN pip3 install --upgrade pip
-RUN pip3 install awscli
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install && \
+    rm -rf awscliv2.zip aws
 
 ENV CRON_TIME="0 3 * * *" \
     TZ=US/Eastern \
