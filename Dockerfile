@@ -1,6 +1,8 @@
 FROM mongo
 
-RUN apt-get update && apt-get -y install cron awscli
+RUN apt-get update && apt-get install -y python3 python3-pip
+
+RUN pip3 install awscli
 
 ENV CRON_TIME="0 3 * * *" \
   TZ=US/Eastern \
