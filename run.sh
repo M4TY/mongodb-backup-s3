@@ -92,8 +92,10 @@ if [ -n "${INIT_BACKUP}" ]; then
 fi
 
 if [ -z "${DISABLE_CRON}" ]; then
-    echo "${CRON_TIME} . /root/project_env.sh; /backup.sh >> /mongo_backup.log 2>&1" > /crontab.conf
-    crontab  /crontab.conf
-    echo "=> Running cron job"
-    cron && tail -f /mongo_backup.log
+    CRON_JOB="/bin/bash -l -c 'source /root/project_env.sh && cd / && /backup.sh'"
+    echo "${CRON_TIME} ${CRON_JOB} >> /mongo_backup.log 2>&1" | crontab -
+    
+    echo "Cron job installed:"
+    crontab -l
+    exec cron -f -L 15
 fi
